@@ -10,31 +10,16 @@ import type {
   BinaryLike,
   BinaryToTextEncoding,
   Encoding,
-  PrivateKeyInput,
-  PublicKeyInput,
+  SignPrivateKeyInput,
+  VerifyPublicKeyInput,
 } from "./types.ts";
-import { KeyObject } from "./keys.ts";
-
-export type DSAEncoding = "der" | "ieee-p1363";
-
-export interface SigningOptions {
-  padding?: number | undefined;
-  saltLength?: number | undefined;
-  dsaEncoding?: DSAEncoding | undefined;
-}
-
-export interface SignPrivateKeyInput extends PrivateKeyInput, SigningOptions {}
-
-export interface SignKeyObjectInput extends SigningOptions {
-  key: KeyObject;
-}
-export interface VerifyPublicKeyInput extends PublicKeyInput, SigningOptions {}
-
-export interface VerifyKeyObjectInput extends SigningOptions {
-  key: KeyObject;
-}
-
-export type KeyLike = string | Buffer | KeyObject;
+import { ERR_CRYPTO_SIGN_KEY_REQUIRED } from "../errors.ts";
+import {
+  KeyLike,
+  preparePrivateKey,
+  SignKeyObjectInput,
+  VerifyKeyObjectInput,
+} from "./_keys.ts";
 
 export class Sign extends Writable {
   constructor(algorithm: string, _options?: WritableOptions) {
@@ -51,10 +36,34 @@ export class Sign extends Writable {
     outputFormat: BinaryToTextEncoding,
   ): string;
   sign(
-    _privateKey: KeyLike | SignKeyObjectInput | SignPrivateKeyInput,
-    _outputEncoding?: BinaryToTextEncoding,
+    privateKey: KeyLike | SignKeyObjectInput | SignPrivateKeyInput,
+    outputEncoding?: BinaryToTextEncoding,
   ): Buffer | string {
-    notImplemented("crypto.Sign.prototype.sign");
+    if (!privateKey) throw new ERR_CRYPTO_SIGN_KEY_REQUIRED();
+
+    const { data, format, type, passphrase } = preparePrivateKey(privateKey);
+
+    // Options specific to RSA
+    const rsaPadding = getPadding(options);
+    const pssSaltLength = getSaltLength(options);
+
+    // Options specific to (EC)DSA
+    const dsaSigEnc = getDSASignatureEncoding(options);
+
+    const ret = this[kHandle].sign(
+      data,
+      format,
+      type,
+      passphrase,
+      rsaPadding,
+      pssSaltLength,
+      dsaSigEnc,
+    );
+
+    encoding = encoding || getDefaultEncoding();
+    if (encoding && encoding !== "buffer") return ret.toString(encoding);
+
+    return ret;
   }
 
   update(data: BinaryLike): this;

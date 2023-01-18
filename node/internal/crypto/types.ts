@@ -44,3 +44,15 @@ export interface PublicKeyInput {
   format?: KeyFormat | undefined;
   type?: "pkcs1" | "spki" | undefined;
 }
+
+export type DSAEncoding = "der" | "ieee-p1363";
+
+export interface SigningOptions {
+  padding?: number | undefined;
+  saltLength?: number | undefined;
+  dsaEncoding?: DSAEncoding | undefined;
+}
+
+export interface SignPrivateKeyInput extends PrivateKeyInput, SigningOptions {}
+
+export interface VerifyPublicKeyInput extends PublicKeyInput, SigningOptions {}

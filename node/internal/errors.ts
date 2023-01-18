@@ -896,6 +896,12 @@ export class ERR_CRYPTO_INVALID_DIGEST extends NodeTypeError {
   }
 }
 
+export class ERR_CRYPTO_INVALID_JWK extends NodeTypeError {
+  constructor() {
+    super("ERR_CRYPTO_INVALID_JWK", `Invalid JWK data`);
+  }
+}
+
 export class ERR_CRYPTO_INVALID_KEY_OBJECT_TYPE extends NodeTypeError {
   constructor(x: string, y: string) {
     super(
@@ -1361,6 +1367,14 @@ export class ERR_HTTP_TRAILER_INVALID extends NodeError {
     super(
       "ERR_HTTP_TRAILER_INVALID",
       `Trailers are invalid with this transfer encoding`,
+    );
+  }
+}
+export class ERR_ILLEGAL_CONSTRUCTOR extends NodeTypeError {
+  constructor() {
+    super(
+      "ERR_ILLEGAL_CONSTRUCTOR",
+      `Illegal constructor`,
     );
   }
 }
