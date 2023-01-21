@@ -15,6 +15,7 @@ import {
   ArrayPrototypeSlice,
   ObjectDefineProperties,
   ObjectDefineProperty,
+  SymbolToStringTag,
 } from "../primordials.mjs";
 import {
   customInspectSymbol as kInspect,
@@ -27,22 +28,8 @@ import {
   validateOneOf,
   validateString,
 } from "../validators.mjs";
-import {
-  Encoding,
-  KeyType,
-  PrivateKeyInput,
-  SignPrivateKeyInput,
-} from "./types.ts";
+import { Encoding, KeyType, SignPrivateKeyInput } from "./types.ts";
 import { getArrayBufferOrView, kHandle, kKeyObject } from "./util.ts";
-
-const {
-  kKeyTypeSecret,
-  kKeyTypePublic,
-  kKeyTypePrivate,
-  kKeyFormatPEM,
-  kKeyFormatDER,
-  kKeyFormatJWK,
-} = internalBinding("crypto");
 
 enum PKEncodingType {
   // RSAPublicKey / RSAPrivateKey according to PKCS#1.
@@ -55,43 +42,23 @@ enum PKEncodingType {
   kKeyEncodingSEC1,
 }
 
-// const {
-//   validateObject,
-//   validateOneOf,
-//   validateString,
-// } = require('internal/validators');
+enum PKFormatType {
+  kKeyFormatDER,
+  kKeyFormatPEM,
+  kKeyFormatJWK,
+}
 
-// const {
-//   codes: {
-//     ERR_CRYPTO_INCOMPATIBLE_KEY_OPTIONS,
-//     ERR_CRYPTO_INVALID_KEY_OBJECT_TYPE,
-//     ERR_CRYPTO_INVALID_JWK,
-//     ERR_ILLEGAL_CONSTRUCTOR,
-//     ERR_INVALID_ARG_TYPE,
-//     ERR_INVALID_ARG_VALUE,
-//     ERR_INVALID_THIS,
-//   }
-// } = require('internal/errors');
-
-// const {
-//   isAnyArrayBuffer,
-//   isArrayBufferView,
-// } = require('internal/util/types');
+enum KeyTypeOrdinal {
+  kKeyTypeSecret,
+  kKeyTypePublic,
+  kKeyTypePrivate,
+}
 
 // const {
 //   makeTransferable,
 //   kClone,
 //   kDeserialize,
 // } = require('internal/worker/js_transferable');
-
-// const {
-//   customInspectSymbol: kInspect,
-//   kEnumerableProperty,
-// } = require('internal/util');
-
-// const { inspect } = require('internal/util/inspect');
-
-// const { Buffer } = require('buffer');
 
 const kAlgorithm = Symbol("kAlgorithm");
 const kExtractable = Symbol("kExtractable");
@@ -130,22 +97,33 @@ class KeyObjectHandle {
   }
 
   initJwk(jwk, crv?: unknown) {
+    notImplemented(this.initJwk.name);
   }
 
   initEDRaw(crv, keyData, keyType): boolean {
-    return true;
+    notImplemented(this.initEDRaw.name);
   }
 
   getSymmetricKeySize(): number {
     notImplemented(this.getSymmetricKeySize.name);
   }
 
-  export(): void;
-  export(format, type): void;
-  export(format, type, cipher: string, passphrase: string | Buffer): void;
-  export(format, type, cipher?: string, passphrase?: string | Buffer): void {}
+  getAsymmetricKeyType(): KeyType {
+    notImplemented(this.getAsymmetricKeyType.name);
+  }
 
-  exportJwk(options, bool: boolean) {}
+  keyDetail(detail): {} {
+    notImplemented(this.keyDetail.name);
+  }
+
+  export(): void;
+  export(format, type, cipher?: string, passphrase?: string | Buffer): void {
+    notImplemented(this.export.name);
+  }
+
+  exportJwk(options, bool: boolean) {
+    notImplemented(this.exportJwk.name);
+  }
 
   equals(otherHandle: KeyObjectHandle): boolean {
     return this === otherHandle;
@@ -259,6 +237,9 @@ function normalizeKeyDetails(details: {} = {}) {
 }
 
 class AsymmetricKeyObject extends KeyObject {
+  [kAsymmetricKeyType]?: KeyType;
+  [kAsymmetricKeyDetails]?: unknown;
+
   constructor(type: KeyObjectType, handle: KeyObjectHandle) {
     super(type, handle);
   }
@@ -288,13 +269,18 @@ class AsymmetricKeyObject extends KeyObject {
   }
 }
 
+type PublicKeyExportOptions = {
+  type?: "pkcs1" | "spki";
+  format?: "pem" | "der" | "jwk";
+};
+
 export class PublicKeyObject extends AsymmetricKeyObject {
   constructor(handle: KeyObjectHandle) {
     super("public", handle);
   }
 
-  export(options: PublicKeyInput) {
-    if (options && options.format as "jwk" === "jwk") {
+  export(options: PublicKeyExportOptions) {
+    if (options && options.format as unknown === "jwk") {
       return this[kHandle].exportJwk({}, false);
     }
     const { format, type } = parsePublicKeyEncoding(
@@ -305,13 +291,20 @@ export class PublicKeyObject extends AsymmetricKeyObject {
   }
 }
 
+type PrivateKeyExportOptions = {
+  type?: "pkcs1" | "pkcs8" | "sec1";
+  format?: "pem" | "der" | "jwk";
+  cipher?: string;
+  passphrase?: string | Buffer;
+};
+
 export class PrivateKeyObject extends AsymmetricKeyObject {
   constructor(handle: KeyObjectHandle) {
     super("private", handle);
   }
 
-  export(options: PrivateKeyInput) {
-    if (options && options.format as "jwk" === "jwk") {
+  export(options: PrivateKeyExportOptions) {
+    if (options && options.format as unknown === "jwk") {
       if (options.passphrase !== undefined) {
         throw new ERR_CRYPTO_INCOMPATIBLE_KEY_OPTIONS(
           "jwk",
@@ -332,14 +325,14 @@ type KeyFormatString = "pem" | "der" | "jwk";
 
 function parseKeyFormat(
   formatStr: KeyFormatString | undefined,
-  defaultFormat: KeyFormatString | undefined,
+  defaultFormat: PKFormatType | undefined,
   optionName: string,
 ) {
   if (formatStr === undefined && defaultFormat !== undefined) {
     return defaultFormat;
-  } else if (formatStr === "pem") return kKeyFormatPEM;
-  else if (formatStr === "der") return kKeyFormatDER;
-  else if (formatStr === "jwk") return kKeyFormatJWK;
+  } else if (formatStr === "pem") return PKFormatType.kKeyFormatPEM;
+  else if (formatStr === "der") return PKFormatType.kKeyFormatDER;
+  else if (formatStr === "jwk") return PKFormatType.kKeyFormatJWK;
   throw new ERR_INVALID_ARG_VALUE(optionName, formatStr);
 }
 
@@ -384,22 +377,25 @@ function option(name: string, objName?: string): string {
 }
 
 function parseKeyFormatAndType(
-  enc: { format?: KeyFormatString; type?: PKEncodingName },
+  enc?: KeyLike | { format?: KeyFormatString; type?: PKEncodingName },
   keyType?: KeyType,
   isPublic?: boolean,
   objName?: string,
 ) {
-  const { format: formatStr, type: typeStr } = enc;
+  const { format: formatStr, type: typeStr } = enc as {
+    format?: KeyFormatString;
+    type?: PKEncodingName;
+  };
 
   const isInput = keyType === undefined;
   const format = parseKeyFormat(
     formatStr,
-    isInput ? kKeyFormatPEM : undefined,
+    isInput ? PKFormatType.kKeyFormatPEM : undefined,
     option("format", objName),
   );
 
-  const isRequired = (!isInput || format === kKeyFormatDER) &&
-    format !== kKeyFormatJWK;
+  const isRequired = (!isInput || format === PKFormatType.kKeyFormatDER) &&
+    format !== PKFormatType.kKeyFormatJWK;
   const type = parseKeyType(
     typeStr,
     isRequired,
@@ -416,8 +412,12 @@ function isStringOrBuffer(val: unknown): val is string | Buffer {
 }
 
 export function parseKeyEncoding(
-  enc: PublicKeyInput | PrivateKeyInput,
-  keyType: KeyType,
+  enc:
+    | KeyLike
+    | PublicKeyExportOptions
+    | PrivateKeyExportOptions
+    | CreatePrivateKeyParams,
+  keyType?: KeyType,
   isPublic?: boolean,
   objName?: string,
 ) {
@@ -434,7 +434,9 @@ export function parseKeyEncoding(
 
   let cipher, passphrase, encoding;
   if (isPublic !== true) {
-    ({ cipher, passphrase, encoding } = enc);
+    ({ cipher, passphrase, encoding } = enc as PrivateKeyExportOptions & {
+      encoding?: Encoding;
+    });
 
     if (!isInput) {
       if (cipher != null) {
@@ -442,7 +444,7 @@ export function parseKeyEncoding(
           throw new ERR_INVALID_ARG_VALUE(option("cipher", objName), cipher);
         }
         if (
-          format === kKeyFormatDER &&
+          format === PKFormatType.kKeyFormatDER &&
           (type === PKEncodingType.kKeyEncodingPKCS1 ||
             type === PKEncodingType.kKeyEncodingSEC1)
         ) {
@@ -478,8 +480,8 @@ export function parseKeyEncoding(
 // when this is used to parse an input encoding and must be a valid key type if
 // used to parse an output encoding.
 export function parsePublicKeyEncoding(
-  enc: PublicKeyInput,
-  keyType: "pkcs1" | "spki",
+  enc: PublicKeyExportOptions,
+  keyType: KeyType,
   objName?: string,
 ) {
   return parseKeyEncoding(enc, keyType, keyType ? true : undefined, objName);
@@ -489,14 +491,17 @@ export function parsePublicKeyEncoding(
 // when this is used to parse an input encoding and must be a valid key type if
 // used to parse an output encoding.
 export function parsePrivateKeyEncoding(
-  enc: PrivateKeyInput,
-  keyType: "pkcs1" | "pkcs8" | "sec1",
+  enc: PrivateKeyExportOptions,
+  keyType: KeyType,
   objName?: string,
 ) {
   return parseKeyEncoding(enc, keyType, false, objName);
 }
 
-function getKeyObjectHandle(key, ctx: KeyInputContext) {
+function getKeyObjectHandle(
+  key: KeyObject,
+  ctx: KeyInputContext,
+): KeyObjectHandle {
   if (ctx === kCreatePrivate) {
     throw new ERR_INVALID_ARG_TYPE(
       "key",
@@ -575,7 +580,9 @@ function getKeyObjectHandleFromJwk(key, ctx) {
 
     const handle = new KeyObjectHandle();
 
-    const keyType = isPublic ? kKeyTypePublic : kKeyTypePrivate;
+    const keyType = isPublic
+      ? KeyTypeOrdinal.kKeyTypePublic
+      : KeyTypeOrdinal.kKeyTypePrivate;
     if (!handle.initEDRaw(key.crv, keyData, keyType)) {
       throw new ERR_CRYPTO_INVALID_JWK();
     }
@@ -641,9 +648,19 @@ function getKeyObjectHandleFromJwk(key, ctx) {
 }
 
 function prepareAsymmetricKey(
-  key: KeyLike | PrivateKeyParams,
+  key: KeyLike | CreatePrivateKeyParams,
   ctx: KeyInputContext,
-) {
+):
+  | { data: KeyObjectHandle; format?: undefined }
+  | { format: PKFormatType; data: string | ArrayBuffer | ArrayBufferView }
+  | { data: KeyObjectHandle; format: string }
+  | {
+    format: PKFormatType;
+    type: PKEncodingType | undefined;
+    cipher: any;
+    passphrase: string | ArrayBuffer | ArrayBufferView | undefined;
+    data: string | ArrayBuffer | ArrayBufferView;
+  } {
   // TODO (jeiea): types
   if (isKeyObject(key)) {
     // Best case: A key object, as simple as that.
@@ -652,9 +669,12 @@ function prepareAsymmetricKey(
     return { data: getKeyObjectHandle(key[kKeyObject], ctx) };
   } else if (isStringOrBuffer(key)) {
     // Expect PEM by default, mostly for backward compatibility.
-    return { format: kKeyFormatPEM, data: getArrayBufferOrView(key, "key") };
+    return {
+      format: PKFormatType.kKeyFormatPEM,
+      data: getArrayBufferOrView(key, "key"),
+    };
   } else if (typeof key === "object") {
-    const { key: data, encoding, format } = key as PrivateKeyParams;
+    const { key: data, encoding, format } = key as CreatePrivateKeyParams;
 
     // The 'key' property can be a KeyObject as well to allow specifying
     // additional options such as padding along with the key.
@@ -736,13 +756,14 @@ export function createSecretKey(
 ): KeyObject {
   key = prepareSecretKey(key, encoding, true);
   const handle = new KeyObjectHandle();
-  handle.init(kKeyTypeSecret, key);
+  handle.init(KeyTypeOrdinal.kKeyTypeSecret, key);
   return new SecretKeyObject(handle);
 }
 
-type PublicKeyInput =
+type CreatePublicKeyParams =
   & ({
     key: Omit<KeyLike, string>;
+    encoding?: never;
   } | {
     key: string;
     encoding: Encoding;
@@ -753,7 +774,7 @@ type PublicKeyInput =
     format: "der";
     type: "pkcs1" | "spki";
   });
-export function createPublicKey(key: KeyLike | PublicKeyInput) {
+export function createPublicKey(key: KeyLike | CreatePublicKeyParams) {
   const { format, type, data, passphrase } = prepareAsymmetricKey(
     key,
     kCreatePublic,
@@ -763,15 +784,20 @@ export function createPublicKey(key: KeyLike | PublicKeyInput) {
     handle = data;
   } else {
     handle = new KeyObjectHandle();
-    handle.init(kKeyTypePublic, data, format, type, passphrase);
+    handle.init(KeyTypeOrdinal.kKeyTypePublic, data, format, type, passphrase);
   }
   return new PublicKeyObject(handle);
 }
 
-type PrivateKeyParams =
+type CreatePrivateKeyParams =
+  & ({
+    key: Omit<KeyLike, string>;
+    encoding?: never;
+  } | {
+    key: string;
+    encoding: Encoding;
+  })
   & {
-    key: KeyLike;
-    encoding?: Encoding;
     passphrase?: string | Buffer;
   }
   & ({
@@ -783,7 +809,7 @@ type PrivateKeyParams =
   });
 
 export function createPrivateKey(
-  key: KeyLike | PrivateKeyParams,
+  key: KeyLike | CreatePrivateKeyParams,
 ): PrivateKeyObject {
   const { format, type, data, passphrase } = prepareAsymmetricKey(
     key,
@@ -794,7 +820,7 @@ export function createPrivateKey(
     handle = data;
   } else {
     handle = new KeyObjectHandle();
-    handle.init(kKeyTypePrivate, data, format, type, passphrase);
+    handle.init(KeyTypeOrdinal.kKeyTypePrivate, data, format, type, passphrase);
   }
   return new PrivateKeyObject(handle);
 }
@@ -872,7 +898,7 @@ export class InternalCryptoKey extends CryptoKey {
   [kKeyObject]: KeyObject;
   [kAlgorithm]: string;
   [kExtractable]: boolean;
-  [kKeyUsages]: unknown;
+  [kKeyUsages]: unknown[];
 
   constructor(
     keyObject: KeyObject,

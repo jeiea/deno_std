@@ -32,3 +32,4 @@ export const StringPrototypeSplit = (that, ...args) => that.split(...args);
 export const StringPrototypeStartsWith = (that, ...args) =>
   that.startsWith(...args);
 export const StringPrototypeToUpperCase = (that) => that.toUpperCase();
+export const SymbolToStringTag = Symbol.toStringTag;
