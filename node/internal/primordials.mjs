@@ -1,5 +1,6 @@
 // Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
 
+export const ArrayFrom = Array.from;
 export const ArrayIsArray = Array.isArray;
 export const ArrayPrototypeFilter = (that, ...args) => that.filter(...args);
 export const ArrayPrototypeForEach = (that, ...args) => that.forEach(...args);

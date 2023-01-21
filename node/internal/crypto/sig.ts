@@ -1,25 +1,29 @@
 // Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
 // Copyright Joyent, Inc. and Node.js contributors. All rights reserved. MIT license.
 
-import { notImplemented } from "../../_utils.ts";
-import { validateString } from "../validators.mjs";
 import { Buffer } from "../../buffer.ts";
 import type { WritableOptions } from "../../_stream.d.ts";
+import { notImplemented } from "../../_utils.ts";
+import { ERR_CRYPTO_SIGN_KEY_REQUIRED } from "../errors.ts";
 import Writable from "../streams/writable.mjs";
+import { validateString } from "../validators.mjs";
 import type {
   BinaryLike,
   BinaryToTextEncoding,
   Encoding,
+  SigningOptions,
   SignPrivateKeyInput,
   VerifyPublicKeyInput,
 } from "./types.ts";
-import { ERR_CRYPTO_SIGN_KEY_REQUIRED } from "../errors.ts";
-import {
-  KeyLike,
-  preparePrivateKey,
-  SignKeyObjectInput,
-  VerifyKeyObjectInput,
-} from "./_keys.ts";
+import { getDefaultEncoding } from "./util.ts";
+import { KeyLike, KeyObject, preparePrivateKey } from "./_keys.ts";
+
+export interface SignKeyObjectInput extends SigningOptions {
+  key: KeyObject;
+}
+export interface VerifyKeyObjectInput extends SigningOptions {
+  key: KeyObject;
+}
 
 export class Sign extends Writable {
   constructor(algorithm: string, _options?: WritableOptions) {
@@ -33,11 +37,11 @@ export class Sign extends Writable {
   sign(privateKey: KeyLike | SignKeyObjectInput | SignPrivateKeyInput): Buffer;
   sign(
     privateKey: KeyLike | SignKeyObjectInput | SignPrivateKeyInput,
-    outputFormat: BinaryToTextEncoding,
+    outputFormat: BinaryToTextEncoding | "buffer",
   ): string;
   sign(
     privateKey: KeyLike | SignKeyObjectInput | SignPrivateKeyInput,
-    outputEncoding?: BinaryToTextEncoding,
+    outputFormat?: BinaryToTextEncoding | "buffer",
   ): Buffer | string {
     if (!privateKey) throw new ERR_CRYPTO_SIGN_KEY_REQUIRED();
 
@@ -60,8 +64,10 @@ export class Sign extends Writable {
       dsaSigEnc,
     );
 
-    encoding = encoding || getDefaultEncoding();
-    if (encoding && encoding !== "buffer") return ret.toString(encoding);
+    outputFormat = outputFormat || getDefaultEncoding();
+    if (outputFormat && outputFormat !== "buffer") {
+      return ret.toString(outputFormat);
+    }
 
     return ret;
   }

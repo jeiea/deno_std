@@ -1,55 +1,28 @@
 // Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
 // Copyright Joyent, Inc. and Node.js contributors. All rights reserved. MIT license.
 
-import { kHandle, kKeyObject } from "./constants.ts";
+import { Buffer } from "../../buffer.ts";
+import { notImplemented } from "../../_utils.ts";
 import {
   ERR_CRYPTO_INVALID_KEY_OBJECT_TYPE,
   ERR_INVALID_ARG_TYPE,
   ERR_INVALID_ARG_VALUE,
 } from "../errors.ts";
-import { notImplemented } from "../../_utils.ts";
+import { isAnyArrayBuffer, isArrayBufferView } from "../util/types.ts";
+import { kHandle, kKeyObject } from "./constants.ts";
 import type {
   KeyFormat,
   KeyType,
   PrivateKeyInput,
   PublicKeyInput,
 } from "./types.ts";
-import { Buffer } from "../../buffer.ts";
-import { isAnyArrayBuffer, isArrayBufferView } from "../util/types.ts";
-import { hideStackFrames } from "../errors.ts";
+import { getArrayBufferOrView } from "./util.ts";
 import {
   isCryptoKey as isCryptoKey_,
   isKeyObject as isKeyObject_,
-  kKeyType,
 } from "./_keys.ts";
 
-const getArrayBufferOrView = hideStackFrames(
-  (buffer, name, encoding): Buffer => {
-    if (isAnyArrayBuffer(buffer)) {
-      return buffer;
-    }
-    if (typeof buffer === "string") {
-      if (encoding === "buffer") {
-        encoding = "utf8";
-      }
-      return Buffer.from(buffer, encoding);
-    }
-    if (!isArrayBufferView(buffer)) {
-      throw new ERR_INVALID_ARG_TYPE(
-        name,
-        [
-          "string",
-          "ArrayBuffer",
-          "Buffer",
-          "TypedArray",
-          "DataView",
-        ],
-        buffer,
-      );
-    }
-    return buffer;
-  },
-);
+const kKeyType = Symbol("kKeyType");
 
 export interface AsymmetricKeyDetails {
   /**

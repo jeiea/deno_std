@@ -1,13 +1,14 @@
 // Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
 // Copyright Joyent, Inc. and Node.js contributors. All rights reserved. MIT license.
 
+import { Buffer } from "../../buffer.ts";
+import { crypto as constants } from "../../internal_binding/constants.ts";
 import { getCiphers } from "../../_crypto/crypto_browserify/browserify_aes/mod.js";
 import { notImplemented } from "../../_utils.ts";
-import { Buffer } from "../../buffer.ts";
 import { ERR_INVALID_ARG_TYPE, hideStackFrames } from "../errors.ts";
 import { isAnyArrayBuffer, isArrayBufferView } from "../util/types.ts";
-import { crypto as constants } from "../../internal_binding/constants.ts";
 import { kHandle, kKeyObject } from "./constants.ts";
+import { BinaryToTextEncoding, Encoding } from "./types.ts";
 
 // TODO(kt3k): Generate this list from `digestAlgorithms`
 // of std/crypto/_wasm/mod.ts
@@ -38,13 +39,13 @@ const digestAlgorithms = [
   "sha1",
 ];
 
-let defaultEncoding = "buffer";
+let defaultEncoding: BinaryToTextEncoding | "buffer" = "buffer";
 
-export function setDefaultEncoding(val: string) {
+export function setDefaultEncoding(val: BinaryToTextEncoding | "buffer") {
   defaultEncoding = val;
 }
 
-export function getDefaultEncoding(): string {
+export function getDefaultEncoding(): BinaryToTextEncoding | "buffer" {
   return defaultEncoding;
 }
 
@@ -103,9 +104,42 @@ export function setEngine(_engine: string, _flags: typeof constants) {
   notImplemented("crypto.setEngine");
 }
 
+export const getArrayBufferOrView = hideStackFrames(
+  (
+    buffer: string | Buffer | ArrayBuffer | ArrayBufferView,
+    name: string,
+    encoding?: Encoding | "buffer",
+  ) => {
+    if (isAnyArrayBuffer(buffer)) {
+      return buffer;
+    }
+    if (typeof buffer === "string") {
+      if (encoding === "buffer") {
+        encoding = "utf8";
+      }
+      return Buffer.from(buffer, encoding);
+    }
+    if (!isArrayBufferView(buffer)) {
+      throw new ERR_INVALID_ARG_TYPE(
+        name,
+        [
+          "string",
+          "ArrayBuffer",
+          "Buffer",
+          "TypedArray",
+          "DataView",
+        ],
+        buffer,
+      );
+    }
+    return buffer;
+  },
+);
+
 export { getCiphers, kHandle, kKeyObject };
 
 export default {
+  getArrayBufferOrView,
   getDefaultEncoding,
   getHashes,
   setDefaultEncoding,
