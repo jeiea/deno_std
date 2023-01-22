@@ -27,19 +27,6 @@ export enum KeyTypeOrdinal {
   kKeyTypePrivate,
 }
 
-type PKEncodingName = "pkcs1" | "pkcs8" | "spki" | "sec1";
-const encodingNames: string[] = [];
-for (
-  const [ordinal, name] of [
-    [PKEncodingType.kKeyEncodingPKCS1, "pkcs1"],
-    [PKEncodingType.kKeyEncodingPKCS8, "pkcs8"],
-    [PKEncodingType.kKeyEncodingSPKI, "spki"],
-    [PKEncodingType.kKeyEncodingSEC1, "sec1"],
-  ] as const
-) {
-  encodingNames[ordinal] = name;
-}
-
 export class KeyObjectHandle {
   init(
     kKeyTypePrivate,
@@ -70,8 +57,12 @@ export class KeyObjectHandle {
     notImplemented(this.keyDetail.name);
   }
 
-  export(): void;
-  export(format, type, cipher?: string, passphrase?: string | Buffer): void {
+  export(
+    format?: PKFormatType,
+    type?: PKEncodingType,
+    cipher?: string,
+    passphrase?: string | Buffer,
+  ): void {
     notImplemented(this.export.name);
   }
 

@@ -22,7 +22,7 @@
 // USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import * as bindingTypes from "../../internal_binding/types.ts";
-export { isCryptoKey, isKeyObject } from "../crypto/_keys.ts";
+export { isCryptoKey, isKeyObject } from "../crypto/keys.ts";
 
 // https://tc39.es/ecma262/#sec-get-%typedarray%.prototype-@@tostringtag
 const _getTypedArrayToStringTag = Object.getOwnPropertyDescriptor(
@@ -30,7 +30,7 @@ const _getTypedArrayToStringTag = Object.getOwnPropertyDescriptor(
   Symbol.toStringTag,
 )!.get!;
 
-export function isArrayBufferView(value: unknown): boolean {
+export function isArrayBufferView(value: unknown): value is ArrayBufferView {
   return ArrayBuffer.isView(value);
 }
 

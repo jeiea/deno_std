@@ -15,10 +15,14 @@ export const ObjectAssign = Object.assign;
 export const ObjectCreate = Object.create;
 export const ObjectDefineProperties = Object.defineProperties;
 export const ObjectDefineProperty = Object.defineProperty;
-export const ObjectSetPrototypeOf = Object.setPrototypeOf;
+export const ObjectGetOwnPropertyDescriptors = Object.getOwnPropertyDescriptors;
+export const ObjectGetPrototypeOf = Object.getPrototypeOf;
 export const ObjectPrototypeHasOwnProperty = Object.hasOwn;
-export const RegExpPrototypeTest = (that, ...args) => that.test(...args);
+export const ObjectSetPrototypeOf = Object.setPrototypeOf;
+export const ObjectValues = Object.values;
+export const ReflectConstruct = Reflect.construct;
 export const RegExpPrototypeExec = RegExp.prototype.exec;
+export const RegExpPrototypeTest = (that, ...args) => that.test(...args);
 export const StringFromCharCode = String.fromCharCode;
 export const StringPrototypeCharCodeAt = (that, ...args) =>
   that.charCodeAt(...args);

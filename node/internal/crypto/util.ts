@@ -136,9 +136,21 @@ export const getArrayBufferOrView = hideStackFrames(
   },
 );
 
+export function bigIntArrayToUnsignedBigInt(input: Uint8Array): bigint {
+  let result = 0n;
+
+  for (let n = 0; n < input.length; ++n) {
+    const n_reversed = input.length - n - 1;
+    result |= BigInt(input[n]) << 8n * BigInt(n_reversed);
+  }
+
+  return result;
+}
+
 export { getCiphers, kHandle, kKeyObject };
 
 export default {
+  bigIntArrayToUnsignedBigInt,
   getArrayBufferOrView,
   getDefaultEncoding,
   getHashes,

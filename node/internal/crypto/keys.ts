@@ -29,8 +29,18 @@ import {
   validateOneOf,
   validateString,
 } from "../validators.mjs";
+import {
+  kClone,
+  kDeserialize,
+  makeTransferable,
+} from "../worker/js_transferable.ts";
 import { Encoding, KeyType } from "./types.ts";
-import { getArrayBufferOrView, kHandle, kKeyObject } from "./util.ts";
+import {
+  bigIntArrayToUnsignedBigInt,
+  getArrayBufferOrView,
+  kHandle,
+  kKeyObject,
+} from "./util.ts";
 import {
   KeyObjectHandle,
   KeyTypeOrdinal,
@@ -38,12 +48,6 @@ import {
   PKEncodingType,
   PKFormatType,
 } from "./_keys.ts";
-
-// const {
-//   makeTransferable,
-//   kClone,
-//   kDeserialize,
-// } = require('internal/worker/js_transferable');
 
 const kAlgorithm = Symbol("kAlgorithm");
 const kExtractable = Symbol("kExtractable");
@@ -157,12 +161,12 @@ export class SecretKeyObject extends KeyObject {
 const kAsymmetricKeyType = Symbol("kAsymmetricKeyType");
 const kAsymmetricKeyDetails = Symbol("kAsymmetricKeyDetails");
 
-function normalizeKeyDetails(details: {} = {}) {
+function normalizeKeyDetails(details: AsymmetricKeyDetails = {}) {
   if (details.publicExponent !== undefined) {
     return {
       ...details,
       publicExponent: bigIntArrayToUnsignedBigInt(
-        new Uint8Array(details.publicExponent),
+        new Uint8Array(Number(details.publicExponent)),
       ),
     };
   }
@@ -370,14 +374,15 @@ function parseKeyFormatAndType(
   return { format, type };
 }
 
-function isStringOrBuffer(val: unknown): val is string | Buffer {
+function isStringOrBuffer(
+  val: unknown,
+): val is string | Buffer | ArrayBuffer | ArrayBufferView {
   return typeof val === "string" || isArrayBufferView(val) ||
     isAnyArrayBuffer(val);
 }
 
 export function parseKeyEncoding(
   enc:
-    | KeyLike
     | PublicKeyExportOptions
     | PrivateKeyExportOptions
     | CreatePrivateKeyParams,
@@ -509,7 +514,10 @@ function getKeyTypes(allowKeyObject: boolean, bufferOnly = false) {
   return types;
 }
 
-function getKeyObjectHandleFromJwk(key, ctx) {
+function getKeyObjectHandleFromJwk(
+  key: JsonWebKey,
+  ctx: KeyInputContext,
+): KeyObjectHandle {
   validateObject(key, "key");
   validateOneOf(key.kty, "key.kty", ["RSA", "EC", "OKP"]);
   const isPublic = ctx === kConsumePublic || ctx === kCreatePublic;
@@ -522,8 +530,8 @@ function getKeyObjectHandleFromJwk(key, ctx) {
     if (!isPublic) validateString(key.d, "key.d");
 
     let keyData;
-    if (isPublic) keyData = Buffer.from(key.x, "base64");
-    else keyData = Buffer.from(key.d, "base64");
+    if (isPublic) keyData = Buffer.from(key.x as string, "base64");
+    else keyData = Buffer.from(key.d as string, "base64");
 
     switch (key.crv) {
       case "Ed25519":
@@ -562,7 +570,7 @@ function getKeyObjectHandleFromJwk(key, ctx) {
     validateString(key.x, "key.x");
     validateString(key.y, "key.y");
 
-    const jwk = {
+    const jwk: JsonWebKey = {
       kty: key.kty,
       crv: key.crv,
       x: key.x,
@@ -585,7 +593,7 @@ function getKeyObjectHandleFromJwk(key, ctx) {
   validateString(key.n, "key.n");
   validateString(key.e, "key.e");
 
-  const jwk = {
+  const jwk: JsonWebKey = {
     kty: key.kty,
     n: key.n,
     e: key.e,
@@ -614,16 +622,21 @@ function getKeyObjectHandleFromJwk(key, ctx) {
 }
 
 function prepareAsymmetricKey(
-  key: KeyLike | CreatePrivateKeyParams,
+  key: CreatePrivateKeyParams | CreatePublicKeyParams,
   ctx: KeyInputContext,
-): {
-  data: KeyObjectHandle | string | Buffer;
-  format?: PKFormatType | "jwk";
-  type?: PKEncodingType;
-  cipher?: string;
-  passphrase?: string | Buffer;
-} {
-  // TODO (jeiea): types
+):
+  & ({
+    data: KeyObjectHandle | KeyLike;
+    format?: PKFormatType;
+  } | {
+    data: KeyObjectHandle;
+    format: "jwk";
+  })
+  & {
+    type?: PKEncodingType;
+    cipher?: string;
+    passphrase?: string | Buffer;
+  } {
   if (isKeyObject(key)) {
     // Best case: A key object, as simple as that.
     return { data: getKeyObjectHandle(key, ctx) };
@@ -636,7 +649,9 @@ function prepareAsymmetricKey(
       data: getArrayBufferOrView(key, "key"),
     };
   } else if (typeof key === "object") {
-    const { key: data, encoding, format } = key as CreatePrivateKeyParams;
+    const { key: data, encoding, format } = key as typeof key & {
+      encoding?: Encoding;
+    };
 
     // The 'key' property can be a KeyObject as well to allow specifying
     // additional options such as padding along with the key.
@@ -673,7 +688,7 @@ function prepareAsymmetricKey(
 }
 
 export function preparePrivateKey(
-  key: KeyLike | CreatePrivateKeyParams,
+  key: CreatePrivateKeyParams,
 ) {
   return prepareAsymmetricKey(key, kConsumePrivate);
 }
@@ -683,10 +698,10 @@ export function preparePublicOrPrivateKey(key: KeyLike) {
 }
 
 export function prepareSecretKey(
-  key: string | ArrayBuffer | KeyObject,
-  encoding: string | undefined,
+  key: KeyLike,
+  encoding?: Encoding,
   bufferOnly = false,
-) {
+): ArrayBuffer | ArrayBufferView | KeyObjectHandle {
   if (!bufferOnly) {
     if (isKeyObject(key)) {
       if (key.type !== "secret") {
@@ -715,21 +730,16 @@ export function prepareSecretKey(
   return getArrayBufferOrView(key, "key", encoding);
 }
 
-export function createSecretKey(
-  key: Buffer | ArrayBuffer | ArrayBufferView,
-): KeyObject;
-export function createSecretKey(key: string, encoding: Encoding): KeyObject;
-export function createSecretKey(
-  key: string | Buffer | ArrayBuffer | ArrayBufferView,
-  encoding?: Encoding,
-): KeyObject {
-  key = prepareSecretKey(key, encoding, true);
+export function createSecretKey(key: KeyLike, encoding?: Encoding): KeyObject {
+  const buffer = prepareSecretKey(key, encoding, true);
   const handle = new KeyObjectHandle();
-  handle.init(KeyTypeOrdinal.kKeyTypeSecret, key);
+  handle.init(KeyTypeOrdinal.kKeyTypeSecret, buffer);
   return new SecretKeyObject(handle);
 }
 
-type CreatePublicKeyParams =
+type CreatePublicKeyParams = KeyLike | ObjectPublicKeyParams | JsonWebKeyInput;
+
+type ObjectPublicKeyParams =
   & ({
     key: Omit<KeyLike, string>;
     encoding?: never;
@@ -738,12 +748,12 @@ type CreatePublicKeyParams =
     encoding: Encoding;
   })
   & ({
-    format?: "pem" | "jwk";
+    format?: "pem";
   } | {
     format: "der";
     type: "pkcs1" | "spki";
   });
-export function createPublicKey(key: KeyLike | CreatePublicKeyParams) {
+export function createPublicKey(key: CreatePublicKeyParams): PublicKeyObject {
   const { format, type, data, passphrase } = prepareAsymmetricKey(
     key,
     kCreatePublic,
@@ -759,6 +769,11 @@ export function createPublicKey(key: KeyLike | CreatePublicKeyParams) {
 }
 
 export type CreatePrivateKeyParams =
+  | KeyLike
+  | ObjectPrivateKeyParams
+  | JsonWebKeyInput;
+
+export type ObjectPrivateKeyParams =
   & ({
     key: Omit<KeyLike, string>;
     encoding?: never;
@@ -770,20 +785,19 @@ export type CreatePrivateKeyParams =
     passphrase?: string | Buffer;
   }
   & ({
-    format?: "pem" | "jwk";
-    type?: never;
+    format?: "pem";
   } | {
     format: "der";
     type: "pkcs1" | "pkcs8" | "sec1";
   });
 
-export interface JsonWebKeyInput {
+export type JsonWebKeyInput = {
   key: JsonWebKey;
   format: "jwk";
-}
+};
 
 export function createPrivateKey(
-  key: KeyLike | CreatePrivateKeyParams | JsonWebKeyInput,
+  key: CreatePrivateKeyParams,
 ): PrivateKeyObject {
   const { format, type, data, passphrase } = prepareAsymmetricKey(
     key,
@@ -853,7 +867,7 @@ export class CryptoKey {
     return this[kAlgorithm];
   }
 
-  get usages() {
+  get usages(): string[] {
     if (!(this instanceof InternalCryptoKey)) {
       throw new ERR_INVALID_THIS("CryptoKey");
     }
@@ -872,12 +886,12 @@ export class InternalCryptoKey extends CryptoKey {
   [kKeyObject]: KeyObject;
   [kAlgorithm]: string;
   [kExtractable]: boolean;
-  [kKeyUsages]: unknown[];
+  [kKeyUsages]: string[];
 
   constructor(
     keyObject: KeyObject,
-    algorithm,
-    keyUsages,
+    algorithm: string,
+    keyUsages: string[],
     extractable: boolean,
   ) {
     super();
@@ -886,8 +900,7 @@ export class InternalCryptoKey extends CryptoKey {
     this[kExtractable] = extractable;
     this[kKeyUsages] = keyUsages;
 
-    // eslint-disable-next-line no-constructor-return
-    return makeTransferable(this);
+    return makeTransferable(this) as InternalCryptoKey;
   }
 
   [kClone]() {
@@ -907,7 +920,14 @@ export class InternalCryptoKey extends CryptoKey {
     };
   }
 
-  [kDeserialize]({ keyObject, algorithm, usages, extractable }) {
+  [kDeserialize](
+    { keyObject, algorithm, usages, extractable }: {
+      keyObject: KeyObject;
+      algorithm: string;
+      usages: string[];
+      extractable: boolean;
+    },
+  ) {
     this[kKeyObject] = keyObject;
     this[kAlgorithm] = algorithm;
     this[kKeyUsages] = usages;

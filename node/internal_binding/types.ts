@@ -31,7 +31,9 @@ const _isObjectLike = (value: unknown): boolean =>
 const _isFunctionLike = (value: unknown): boolean =>
   value !== null && typeof value === "function";
 
-export function isAnyArrayBuffer(value: unknown): boolean {
+export function isAnyArrayBuffer(
+  value: unknown,
+): value is ArrayBuffer | SharedArrayBuffer {
   return (
     _isObjectLike(value) &&
     (_toString.call(value) === "[object ArrayBuffer]" ||
