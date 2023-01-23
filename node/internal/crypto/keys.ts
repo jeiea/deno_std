@@ -345,7 +345,10 @@ function option(name: string, objName?: string): string {
 }
 
 function parseKeyFormatAndType(
-  enc?: BinaryLike | { format?: KeyFormatString; type?: PKEncodingName },
+  enc?: BinaryLike | KeyObject | {
+    format?: KeyFormatString;
+    type?: PKEncodingName;
+  },
   keyType?: KeyType,
   isPublic?: boolean,
   objName?: string,
@@ -620,7 +623,7 @@ function getKeyObjectHandleFromJwk(
 }
 
 function prepareAsymmetricKey(
-  key: CreatePrivateKeyParams | CreatePublicKeyParams,
+  key: CreatePrivateKeyParams | CreatePublicKeyParams | KeyObject,
   ctx: KeyInputContext,
 ):
   & ({
@@ -691,7 +694,7 @@ export function preparePrivateKey(
   return prepareAsymmetricKey(key, kConsumePrivate);
 }
 
-export function preparePublicOrPrivateKey(key: BinaryLike) {
+export function preparePublicOrPrivateKey(key: CreatePublicKeyParams) {
   return prepareAsymmetricKey(key, kConsumePublic);
 }
 
@@ -738,12 +741,13 @@ export function createSecretKey(
   return new SecretKeyObject(handle);
 }
 
-type CreatePublicKeyParams =
+export type CreatePublicKeyParams =
   | BinaryLike
+  | KeyObject
   | ObjectPublicKeyParams
   | JsonWebKeyInput;
 
-type ObjectPublicKeyParams =
+export type ObjectPublicKeyParams =
   & ({
     key: Omit<BinaryLike, string>;
     encoding?: never;
@@ -772,8 +776,14 @@ export function createPublicKey(key: CreatePublicKeyParams): PublicKeyObject {
   return new PublicKeyObject(handle);
 }
 
+export type JsonWebKeyInput = {
+  key: JsonWebKey;
+  format: "jwk";
+};
+
 export type CreatePrivateKeyParams =
   | BinaryLike
+  | KeyObject
   | ObjectPrivateKeyParams
   | JsonWebKeyInput;
 
@@ -794,11 +804,6 @@ export type ObjectPrivateKeyParams =
     format: "der";
     type: "pkcs1" | "pkcs8" | "sec1";
   });
-
-export type JsonWebKeyInput = {
-  key: JsonWebKey;
-  format: "jwk";
-};
 
 export function createPrivateKey(
   key: CreatePrivateKeyParams,

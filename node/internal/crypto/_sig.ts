@@ -15,7 +15,6 @@ export class _Sign {
   }
 
   update(data: BinaryLike, encoding: string) {
-    throw new Error("Method not implemented.");
   }
 
   sign(
@@ -28,5 +27,10 @@ export class _Sign {
     dsaSigEnc: DSASigEnc,
   ): Buffer {
     notImplemented("_Sign.sign");
+  }
+}
+
+export class _Verify {
+  init(algorithm: string) {
   }
 }

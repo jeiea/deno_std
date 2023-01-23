@@ -23,6 +23,7 @@ export const ObjectValues = Object.values;
 export const ReflectConstruct = Reflect.construct;
 export const RegExpPrototypeExec = RegExp.prototype.exec;
 export const RegExpPrototypeTest = (that, ...args) => that.test(...args);
+export const ReflectApply = Reflect.apply;
 export const StringFromCharCode = String.fromCharCode;
 export const StringPrototypeCharCodeAt = (that, ...args) =>
   that.charCodeAt(...args);

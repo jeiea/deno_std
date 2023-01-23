@@ -32,19 +32,6 @@ export type KeyType =
   | "x25519"
   | "x448";
 
-export interface PrivateKeyInput {
-  key: string | Buffer;
-  format?: KeyFormat | undefined;
-  type?: "pkcs1" | "pkcs8" | "sec1" | undefined;
-  passphrase?: string | Buffer | undefined;
-}
-
-export interface PublicKeyInput {
-  key: string | Buffer;
-  format?: KeyFormat | undefined;
-  type?: "pkcs1" | "spki" | undefined;
-}
-
 export type DSAEncoding = "der" | "ieee-p1363";
 
 export interface SigningOptions {
@@ -52,7 +39,3 @@ export interface SigningOptions {
   saltLength?: number | undefined;
   dsaEncoding?: DSAEncoding | undefined;
 }
-
-export interface SignPrivateKeyInput extends PrivateKeyInput, SigningOptions {}
-
-export interface VerifyPublicKeyInput extends PublicKeyInput, SigningOptions {}
