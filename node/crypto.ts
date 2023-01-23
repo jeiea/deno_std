@@ -97,10 +97,6 @@ import {
   randomUUID,
 } from "./internal/crypto/random.ts";
 import { scrypt, scryptSync } from "./internal/crypto/scrypt.ts";
-import type {
-  SignKeyObjectInput,
-  VerifyKeyObjectInput,
-} from "./internal/crypto/sig.ts";
 import {
   Sign,
   signOneShot,
@@ -412,9 +408,7 @@ export type {
   RSAPSSKeyPairOptions,
   SecureHeapUsage,
   SigningOptions,
-  SignKeyObjectInput,
   SignPrivateKeyInput,
-  VerifyKeyObjectInput,
   VerifyPublicKeyInput,
   X25519KeyPairKeyObjectOptions,
   X25519KeyPairOptions,

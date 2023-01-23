@@ -13,23 +13,24 @@
  * ERR_INVALID_PACKAGE_CONFIG // package.json stuff, probably useless
  */
 
+import { assert } from "../../_util/asserts.ts";
+import { isWindows } from "../../_util/os.ts";
 import { inspect } from "../internal/util/inspect.mjs";
-import { codes } from "./error_codes.ts";
+import { os as osConstants } from "../internal_binding/constants.ts";
 import {
   codeMap,
   errorMap,
   mapSysErrnoToUvErrno,
 } from "../internal_binding/uv.ts";
-import { assert } from "../../_util/asserts.ts";
-import { isWindows } from "../../_util/os.ts";
-import { os as osConstants } from "../internal_binding/constants.ts";
+import { getSystemErrorName } from "../_utils.ts";
+import { codes } from "./error_codes.ts";
+import { hideStackFrames } from "./hide_stack_frames.ts";
 const {
   errno: { ENOTDIR, ENOENT },
 } = osConstants;
-import { hideStackFrames } from "./hide_stack_frames.ts";
-import { getSystemErrorName } from "../_utils.ts";
 
 export { errorMap };
+export { codes, genericNodeError, hideStackFrames };
 
 const kIsNodeError = Symbol("kIsNodeError");
 
@@ -2612,8 +2613,6 @@ function determineSpecificType(value: any) {
   return `type ${typeof value} (${inspected})`;
 }
 
-export { codes, genericNodeError, hideStackFrames };
-
 export default {
   AbortError,
   ERR_AMBIGUOUS_ARGUMENT,
@@ -2642,6 +2641,7 @@ export default {
   ERR_CRYPTO_INCOMPATIBLE_KEY,
   ERR_CRYPTO_INCOMPATIBLE_KEY_OPTIONS,
   ERR_CRYPTO_INVALID_DIGEST,
+  ERR_CRYPTO_INVALID_JWK,
   ERR_CRYPTO_INVALID_KEY_OBJECT_TYPE,
   ERR_CRYPTO_INVALID_STATE,
   ERR_CRYPTO_PBKDF2_ERROR,
@@ -2711,6 +2711,7 @@ export default {
   ERR_HTTP_INVALID_STATUS_CODE,
   ERR_HTTP_SOCKET_ENCODING,
   ERR_HTTP_TRAILER_INVALID,
+  ERR_ILLEGAL_CONSTRUCTOR,
   ERR_INCOMPATIBLE_OPTION_PAIR,
   ERR_INPUT_TYPE_NOT_ALLOWED,
   ERR_INSPECTOR_ALREADY_ACTIVATED,
