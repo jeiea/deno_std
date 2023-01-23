@@ -3,11 +3,6 @@
 // Copyright 2013 Maxwell Krohn. All rights reserved. MIT license.
 // Copyright 2009-2013 Jeff Mott. All rights reserved. MIT license.
 
-import { MODES } from "./modes/mod.js";
-
-export * from "./encrypter.js";
 export * from "./decrypter.js";
-
-export function getCiphers() {
-  return Object.keys(MODES);
-}
+export * from "./encrypter.js";
+export { getCiphers } from "./modes/list.ts";

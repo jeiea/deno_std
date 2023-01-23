@@ -3,7 +3,7 @@
 
 import { Buffer } from "../../buffer.ts";
 import { crypto as constants } from "../../internal_binding/constants.ts";
-import { getCiphers } from "../../_crypto/crypto_browserify/browserify_aes/mod.js";
+import { getCiphers } from "../../_crypto/crypto_browserify/browserify_aes/modes/list.ts";
 import { notImplemented } from "../../_utils.ts";
 import { ERR_INVALID_ARG_TYPE, hideStackFrames } from "../errors.ts";
 import { isAnyArrayBuffer, isArrayBufferView } from "../util/types.ts";
