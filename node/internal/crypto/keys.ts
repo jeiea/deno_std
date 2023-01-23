@@ -34,7 +34,7 @@ import {
   kDeserialize,
   makeTransferable,
 } from "../worker/js_transferable.ts";
-import { Encoding, KeyType } from "./types.ts";
+import { BinaryLike, Encoding, KeyType } from "./types.ts";
 import {
   bigIntArrayToUnsignedBigInt,
   getArrayBufferOrView,
@@ -345,7 +345,7 @@ function option(name: string, objName?: string): string {
 }
 
 function parseKeyFormatAndType(
-  enc?: KeyLike | { format?: KeyFormatString; type?: PKEncodingName },
+  enc?: BinaryLike | { format?: KeyFormatString; type?: PKEncodingName },
   keyType?: KeyType,
   isPublic?: boolean,
   objName?: string,
@@ -374,9 +374,7 @@ function parseKeyFormatAndType(
   return { format, type };
 }
 
-function isStringOrBuffer(
-  val: unknown,
-): val is string | Buffer | ArrayBuffer | ArrayBufferView {
+function isStringOrBuffer(val: unknown): val is BinaryLike {
   return typeof val === "string" || isArrayBufferView(val) ||
     isAnyArrayBuffer(val);
 }
@@ -557,7 +555,7 @@ function getKeyObjectHandleFromJwk(
     const keyType = isPublic
       ? KeyTypeOrdinal.kKeyTypePublic
       : KeyTypeOrdinal.kKeyTypePrivate;
-    if (!handle.initEDRaw(key.crv, keyData, keyType)) {
+    if (!handle.initEDRaw(key.crv!, keyData, keyType)) {
       throw new ERR_CRYPTO_INVALID_JWK();
     }
 
@@ -626,7 +624,7 @@ function prepareAsymmetricKey(
   ctx: KeyInputContext,
 ):
   & ({
-    data: KeyObjectHandle | KeyLike;
+    data: KeyObjectHandle | BinaryLike;
     format?: PKFormatType;
   } | {
     data: KeyObjectHandle;
@@ -693,15 +691,15 @@ export function preparePrivateKey(
   return prepareAsymmetricKey(key, kConsumePrivate);
 }
 
-export function preparePublicOrPrivateKey(key: KeyLike) {
+export function preparePublicOrPrivateKey(key: BinaryLike) {
   return prepareAsymmetricKey(key, kConsumePublic);
 }
 
 export function prepareSecretKey(
-  key: KeyLike,
+  key: BinaryLike,
   encoding?: Encoding,
   bufferOnly = false,
-): ArrayBuffer | ArrayBufferView | KeyObjectHandle {
+): ArrayBufferLike | ArrayBufferView | KeyObjectHandle {
   if (!bufferOnly) {
     if (isKeyObject(key)) {
       if (key.type !== "secret") {
@@ -730,18 +728,24 @@ export function prepareSecretKey(
   return getArrayBufferOrView(key, "key", encoding);
 }
 
-export function createSecretKey(key: KeyLike, encoding?: Encoding): KeyObject {
+export function createSecretKey(
+  key: BinaryLike,
+  encoding?: Encoding,
+): KeyObject {
   const buffer = prepareSecretKey(key, encoding, true);
   const handle = new KeyObjectHandle();
   handle.init(KeyTypeOrdinal.kKeyTypeSecret, buffer);
   return new SecretKeyObject(handle);
 }
 
-type CreatePublicKeyParams = KeyLike | ObjectPublicKeyParams | JsonWebKeyInput;
+type CreatePublicKeyParams =
+  | BinaryLike
+  | ObjectPublicKeyParams
+  | JsonWebKeyInput;
 
 type ObjectPublicKeyParams =
   & ({
-    key: Omit<KeyLike, string>;
+    key: Omit<BinaryLike, string>;
     encoding?: never;
   } | {
     key: string;
@@ -769,13 +773,13 @@ export function createPublicKey(key: CreatePublicKeyParams): PublicKeyObject {
 }
 
 export type CreatePrivateKeyParams =
-  | KeyLike
+  | BinaryLike
   | ObjectPrivateKeyParams
   | JsonWebKeyInput;
 
 export type ObjectPrivateKeyParams =
   & ({
-    key: Omit<KeyLike, string>;
+    key: Omit<BinaryLike, string>;
     encoding?: never;
   } | {
     key: string;
@@ -940,12 +944,7 @@ export function isCryptoKey(obj: unknown): obj is InternalCryptoKey {
     (obj as { [kKeyObject]?: unknown })[kKeyObject] !== undefined;
 }
 
-export type KeyLike =
-  | string
-  | Buffer
-  | ArrayBuffer
-  | ArrayBufferView
-  | KeyObject;
+export type { BinaryLike };
 
 export default {
   // Public API.

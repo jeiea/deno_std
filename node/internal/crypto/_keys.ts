@@ -1,7 +1,7 @@
 // Copyright 2018-2023 the Deno authors. All rights reserved. MIT license.
 import { Buffer } from "../../buffer.ts";
 import { notImplemented } from "../../_utils.ts";
-import { KeyType } from "./types.ts";
+import { BinaryLike, KeyType } from "./types.ts";
 import { kHandle } from "./util.ts";
 
 export enum PKEncodingType {
@@ -29,20 +29,24 @@ export enum KeyTypeOrdinal {
 
 export class KeyObjectHandle {
   init(
-    kKeyTypePrivate,
-    data,
-    format?: unknown,
-    type?: unknown,
-    passphrase?: unknown,
+    keyType: KeyTypeOrdinal,
+    data: BinaryLike | KeyObjectHandle,
+    format?: PKFormatType,
+    type?: PKEncodingType,
+    passphrase?: string | Buffer,
   ) {
   }
 
-  initJwk(jwk, crv?: unknown) {
+  initEDRaw(crv: string, keyData: Buffer, keyType: KeyTypeOrdinal): boolean {
+    notImplemented(this.initEDRaw.name);
+  }
+
+  initJwk(jwk: JsonWebKey, crv?: string) {
     notImplemented(this.initJwk.name);
   }
 
-  initEDRaw(crv, keyData, keyType): boolean {
-    notImplemented(this.initEDRaw.name);
+  keyDetail(detail: unknown): {} {
+    notImplemented(this.keyDetail.name);
   }
 
   getSymmetricKeySize(): number {
@@ -51,10 +55,6 @@ export class KeyObjectHandle {
 
   getAsymmetricKeyType(): KeyType {
     notImplemented(this.getAsymmetricKeyType.name);
-  }
-
-  keyDetail(detail): {} {
-    notImplemented(this.keyDetail.name);
   }
 
   export(
@@ -66,7 +66,7 @@ export class KeyObjectHandle {
     notImplemented(this.export.name);
   }
 
-  exportJwk(options, bool: boolean) {
+  exportJwk(options: unknown, bool: boolean) {
     notImplemented(this.exportJwk.name);
   }
 

@@ -6,30 +6,27 @@ import type { WritableOptions } from "../../_stream.d.ts";
 import { notImplemented } from "../../_utils.ts";
 import {
   ERR_CRYPTO_SIGN_KEY_REQUIRED,
+  ERR_INVALID_ARG_TYPE,
   ERR_INVALID_ARG_VALUE,
 } from "../errors.ts";
 import Writable from "../streams/writable.mjs";
-import { validateString } from "../validators.mjs";
+import { isArrayBufferView } from "../util/types.ts";
+import { validateEncoding, validateString } from "../validators.mjs";
 import {
+  BinaryLike,
   CreatePrivateKeyParams,
-  KeyLike,
   KeyObject,
   preparePrivateKey,
 } from "./keys.ts";
 import type {
-  BinaryLike,
   BinaryToTextEncoding,
   Encoding,
   SigningOptions,
   VerifyPublicKeyInput,
 } from "./types.ts";
 import { getDefaultEncoding, kHandle } from "./util.ts";
-import { _Sign } from "./_sig.ts";
+import { _Sign, DSASigEnc } from "./_sig.ts";
 
-enum DSASigEnc {
-  kSigEncDER,
-  kSigEncP1363,
-}
 export interface SignKeyObjectInput extends SigningOptions {
   key: KeyObject;
 }
@@ -51,13 +48,8 @@ export class Sign extends Writable {
     this[kHandle].init(algorithm);
   }
 
-  sign(options: KeyLike | SignPrivateKeyInput): Buffer;
   sign(
-    options: KeyLike | SignPrivateKeyInput,
-    outputFormat: BinaryToTextEncoding | "buffer",
-  ): string;
-  sign(
-    options: KeyLike | SignPrivateKeyInput,
+    options: SignPrivateKeyInput,
     outputFormat?: BinaryToTextEncoding | "buffer",
   ): Buffer | string {
     if (!options) throw new ERR_CRYPTO_SIGN_KEY_REQUIRED();
@@ -89,10 +81,21 @@ export class Sign extends Writable {
     return ret;
   }
 
-  update(data: BinaryLike): this;
-  update(data: string, inputEncoding: Encoding): this;
-  update(_data: BinaryLike | string, _inputEncoding?: Encoding): this {
-    notImplemented("crypto.Sign.prototype.update");
+  update(data: BinaryLike, encoding?: Encoding | "buffer"): this {
+    encoding = encoding || getDefaultEncoding();
+
+    if (typeof data === "string") {
+      validateEncoding(data, encoding);
+    } else if (!isArrayBufferView(data)) {
+      throw new ERR_INVALID_ARG_TYPE(
+        "data",
+        ["string", "Buffer", "TypedArray", "DataView"],
+        data,
+      );
+    }
+
+    this[kHandle].update(data, encoding);
+    return this;
   }
 }
 
@@ -145,16 +148,16 @@ export class Verify extends Writable {
   }
 
   verify(
-    object: KeyLike | VerifyKeyObjectInput | VerifyPublicKeyInput,
+    object: BinaryLike | VerifyKeyObjectInput | VerifyPublicKeyInput,
     signature: ArrayBufferView,
   ): boolean;
   verify(
-    object: KeyLike | VerifyKeyObjectInput | VerifyPublicKeyInput,
+    object: BinaryLike | VerifyKeyObjectInput | VerifyPublicKeyInput,
     signature: string,
     signatureEncoding?: BinaryToTextEncoding,
   ): boolean;
   verify(
-    _object: KeyLike | VerifyKeyObjectInput | VerifyPublicKeyInput,
+    _object: BinaryLike | VerifyKeyObjectInput | VerifyPublicKeyInput,
     _signature: ArrayBufferView | string,
     _signatureEncoding?: BinaryToTextEncoding,
   ): boolean {
@@ -165,18 +168,18 @@ export class Verify extends Writable {
 export function signOneShot(
   algorithm: string | null | undefined,
   data: ArrayBufferView,
-  key: KeyLike | SignKeyObjectInput | SignPrivateKeyInput,
+  key: BinaryLike | SignKeyObjectInput | SignPrivateKeyInput,
 ): Buffer;
 export function signOneShot(
   algorithm: string | null | undefined,
   data: ArrayBufferView,
-  key: KeyLike | SignKeyObjectInput | SignPrivateKeyInput,
+  key: BinaryLike | SignKeyObjectInput | SignPrivateKeyInput,
   callback: (error: Error | null, data: Buffer) => void,
 ): void;
 export function signOneShot(
   _algorithm: string | null | undefined,
   _data: ArrayBufferView,
-  _key: KeyLike | SignKeyObjectInput | SignPrivateKeyInput,
+  _key: BinaryLike | SignKeyObjectInput | SignPrivateKeyInput,
   _callback?: (error: Error | null, data: Buffer) => void,
 ): Buffer | void {
   notImplemented("crypto.sign");
@@ -185,20 +188,20 @@ export function signOneShot(
 export function verifyOneShot(
   algorithm: string | null | undefined,
   data: ArrayBufferView,
-  key: KeyLike | VerifyKeyObjectInput | VerifyPublicKeyInput,
+  key: BinaryLike | VerifyKeyObjectInput | VerifyPublicKeyInput,
   signature: ArrayBufferView,
 ): boolean;
 export function verifyOneShot(
   algorithm: string | null | undefined,
   data: ArrayBufferView,
-  key: KeyLike | VerifyKeyObjectInput | VerifyPublicKeyInput,
+  key: BinaryLike | VerifyKeyObjectInput | VerifyPublicKeyInput,
   signature: ArrayBufferView,
   callback: (error: Error | null, result: boolean) => void,
 ): void;
 export function verifyOneShot(
   _algorithm: string | null | undefined,
   _data: ArrayBufferView,
-  _key: KeyLike | VerifyKeyObjectInput | VerifyPublicKeyInput,
+  _key: BinaryLike | VerifyKeyObjectInput | VerifyPublicKeyInput,
   _signature: ArrayBufferView,
   _callback?: (error: Error | null, result: boolean) => void,
 ): boolean | void {

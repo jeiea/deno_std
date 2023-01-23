@@ -18,7 +18,7 @@ export type Encoding =
 
 export type ECDHKeyFormat = "compressed" | "uncompressed" | "hybrid";
 
-export type BinaryLike = string | ArrayBufferView;
+export type BinaryLike = string | Buffer | ArrayBufferLike | ArrayBufferView;
 
 export type KeyFormat = "pem" | "der";
 
