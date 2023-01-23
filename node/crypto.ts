@@ -71,7 +71,6 @@ import {
   createPrivateKey,
   createPublicKey,
   createSecretKey,
-  KeyLike,
   KeyObject,
 } from "./internal/crypto/keys.ts";
 import type {
@@ -398,7 +397,6 @@ export type {
   HASH_DATA,
   JsonWebKeyInput,
   KeyFormat,
-  KeyLike,
   KeyPairKeyObjectResult,
   KeyPairSyncResult,
   KeyType,

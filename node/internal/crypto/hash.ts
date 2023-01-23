@@ -6,16 +6,16 @@ import {
   DigestContext,
   instantiateWasm,
 } from "../../../crypto/_wasm/mod.ts";
-import { Buffer } from "../../buffer.ts";
-import { Transform } from "../../stream.ts";
-import { encode as encodeToHex } from "../../../encoding/hex.ts";
 import { encode as encodeToBase64 } from "../../../encoding/base64.ts";
 import { encode as encodeToBase64Url } from "../../../encoding/base64url.ts";
+import { encode as encodeToHex } from "../../../encoding/hex.ts";
+import { Buffer } from "../../buffer.ts";
+import { Transform } from "../../stream.ts";
 import type { TransformOptions } from "../../_stream.d.ts";
-import { validateString } from "../validators.mjs";
-import type { BinaryToTextEncoding, Encoding } from "./types.ts";
-import { KeyObject, prepareSecretKey } from "./keys.ts";
 import { notImplemented } from "../../_utils.ts";
+import { validateString } from "../validators.mjs";
+import { KeyObject, prepareSecretKey } from "./keys.ts";
+import type { BinaryToTextEncoding, Encoding } from "./types.ts";
 
 const coerceToBytes = (data: string | BufferSource): Uint8Array => {
   if (data instanceof Uint8Array) {
@@ -166,7 +166,10 @@ class HmacImpl extends Transform {
     }
 
     validateString(hmac, "hmac");
-    const u8Key = prepareSecretKey(key, options?.encoding) as Buffer;
+    const u8Key = prepareSecretKey(
+      key,
+      options?.encoding as Encoding,
+    ) as Buffer;
 
     const alg = hmac.toLowerCase();
     this.#hash = new Hash(alg, options);

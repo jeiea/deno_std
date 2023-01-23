@@ -105,7 +105,7 @@ export function setEngine(_engine: string, _flags: typeof constants) {
 }
 
 export const getArrayBufferOrView = hideStackFrames(
-  <T extends string | Buffer | ArrayBuffer | ArrayBufferView>(
+  <T extends string | Buffer | ArrayBufferLike | ArrayBufferView>(
     buffer: T,
     name: string,
     encoding?: Encoding | "buffer",

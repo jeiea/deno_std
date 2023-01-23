@@ -139,15 +139,15 @@ function innerDeepEqual(
       return false;
     }
   } else if (isArrayBufferView(val1)) {
-    const TypedArrayPrototypeGetSymbolToStringTag = (val: []) =>
+    const TypedArrayPrototypeGetSymbolToStringTag = (val: unknown) =>
       Object.getOwnPropertySymbols(val)
         .map((item) => item.toString())
         .toString();
     if (
       isTypedArray(val1) &&
       isTypedArray(val2) &&
-      (TypedArrayPrototypeGetSymbolToStringTag(val1 as []) !==
-        TypedArrayPrototypeGetSymbolToStringTag(val2 as []))
+      (TypedArrayPrototypeGetSymbolToStringTag(val1) !==
+        TypedArrayPrototypeGetSymbolToStringTag(val2))
     ) {
       return false;
     }
